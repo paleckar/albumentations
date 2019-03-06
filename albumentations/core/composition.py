@@ -1,5 +1,6 @@
 from __future__ import division
 
+import copy
 import random
 import warnings
 
@@ -160,23 +161,32 @@ class Compose(BaseCompose):
                                 "'keypoint_params' dict")
 
         for idx, t in enumerate(transforms):
-            if dual_start_end is not None and idx == dual_start_end[0]:
-                if self.params[self.bboxes_name]:
-                    data = data_preprocessing(self.bboxes_name, self.params[self.bboxes_name], check_bboxes,
-                                              convert_bboxes_to_albumentations, data)
-                if self.params[self.keypoints_name]:
-                    data = data_preprocessing(self.keypoints_name, self.params[self.keypoints_name], check_keypoints,
-                                              convert_keypoints_to_albumentations, data)
+            data_ = copy.deepcopy(data)
 
-            data = t(force_apply=force_apply, **data)
+            for i in range(3):
+                if dual_start_end is not None and idx == dual_start_end[0]:
+                    if self.params[self.bboxes_name]:
+                        data = data_preprocessing(self.bboxes_name, self.params[self.bboxes_name], check_bboxes,
+                                                  convert_bboxes_to_albumentations, data)
+                    if self.params[self.keypoints_name]:
+                        data = data_preprocessing(self.keypoints_name, self.params[self.keypoints_name], check_keypoints,
+                                                  convert_keypoints_to_albumentations, data)
 
-            if dual_start_end is not None and idx == dual_start_end[1]:
-                if self.params[self.bboxes_name]:
-                    data = data_postprocessing(self.bboxes_name, self.params[self.bboxes_name], check_bboxes,
-                                               filter_bboxes, convert_bboxes_from_albumentations, data)
-                if self.params[self.keypoints_name]:
-                    data = data_postprocessing(self.keypoints_name, self.params[self.keypoints_name], check_keypoints,
-                                               filter_keypoints, convert_keypoints_from_albumentations, data)
+                data = t(force_apply=force_apply, **data)
+
+                if dual_start_end is not None and idx == dual_start_end[1]:
+                    if self.params[self.bboxes_name]:
+                        data = data_postprocessing(self.bboxes_name, self.params[self.bboxes_name], check_bboxes,
+                                                   filter_bboxes, convert_bboxes_from_albumentations, data)
+                    if self.params[self.keypoints_name]:
+                        data = data_postprocessing(self.keypoints_name, self.params[self.keypoints_name], check_keypoints,
+                                                   filter_keypoints, convert_keypoints_from_albumentations, data)
+
+                # force keep all objects
+                if len(data['category_id']) == len(data_['category_id']):
+                    break
+                else:
+                    data = copy.deepcopy(data_)
 
         return data
 
